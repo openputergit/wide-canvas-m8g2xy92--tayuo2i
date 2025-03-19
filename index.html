@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bislery - Premium Water Delivery</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; }
+        .slide-in {
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-white shadow-sm fixed w-full top-0 z-50">
+        <nav class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center">
+                <h1 class="text-2xl font-bold text-blue-600">Bislery</h1>
+            </div>
+            <div class="flex items-center gap-4">
+                <button onclick="toggleCart()" class="relative">
+                    <i class="bi bi-cart text-xl"></i>
+                    <span id="cartCount" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">0</span>
+                </button>
+                <button onclick="toggleLogin()" id="loginBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">Login</button>
+            </div>
+        </nav>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto px-4 pt-20 pb-24">
+        <!-- Location Bar -->
+        <div class="bg-white p-4 rounded-lg shadow-sm mb-6">
+            <div class="flex items-center gap-2">
+                <i class="bi bi-geo-alt text-blue-600"></i>
+                <input type="text" placeholder="Enter delivery location" class="flex-1 outline-none" id="locationInput">
+            </div>
+        </div>
+
+        <!-- Products Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4" id="productGrid">
+            <!-- Products will be populated via JavaScript -->
+        </div>
+    </main>
+
+    <!-- Cart Sidebar -->
+    <div id="cartSidebar" class="fixed top-0 right-0 h-full w-full md:w-96 bg-white shadow-lg transform translate-x-full transition-transform duration-300 z-50">
+        <div class="p-4">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Your Cart</h2>
+                <button onclick="toggleCart()" class="text-gray-500"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div id="cartItems" class="space-y-4">
+                <!-- Cart items will be populated via JavaScript -->
+            </div>
+            <div class="border-t mt-4 pt-4">
+                <div class="flex justify-between mb-2">
+                    <span>Subtotal</span>
+                    <span id="cartSubtotal">₹0</span>
+                </div>
+                <button onclick="proceedToCheckout()" class="w-full bg-blue-600 text-white py-3 rounded-lg">Proceed to Checkout</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="fixed inset-0 bg-black bg-opacity-50 hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-auto mt-20">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold">Login</h2>
+                <button onclick="toggleLogin()" class="text-gray-500"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <form onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block mb-1">Phone Number</label>
+                    <input type="tel" id="phoneInput" class="w-full border p-2 rounded" required>
+                </div>
+                <div id="otpDiv" class="hidden">
+                    <label class="block mb-1">OTP</label>
+                    <input type="text" id="otpInput" class="w-full border p-2 rounded">
+                </div>
+                <button type="submit" id="loginSubmitBtn" class="w-full bg-blue-600 text-white py-2 rounded">Send OTP</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Sample product data
+        const products = [
+            { id: 1, name: "Bislery 1L", price: 20, image: "https://source.unsplash.com/300x300/?water-bottle" },
+            { id: 2, name: "Bislery 2L", price: 35, image: "https://source.unsplash.com/300x300/?mineral-water" },
+            { id: 3, name: "Bislery 5L", price: 70, image: "https://source.unsplash.com/300x300/?water" },
+            { id: 4, name: "Bislery Pack of 6", price: 110, image: "https://source.unsplash.com/300x300/?bottled-water" },
+        ];
+
+        let cart = [];
+        let isLoggedIn = false;
+
+        // Initialize products
+        function initProducts() {
+            const grid = document.getElementById('productGrid');
+            products.forEach(product => {
+                const productCard = `
+                    <div class="bg-white p-4 rounded-lg shadow-sm">
+                        <img src="${product.image}" alt="${product.name}" class="w-full h-40 object-cover rounded-lg mb-4">
+                        <h3 class="font-semibold">${product.name}</h3>
+                        <div class="flex justify-between items-center mt-2">
+                            <span class="font-bold">₹${product.price}</span>
+                            <button onclick="addToCart(${product.id})" class="bg-blue-600 text-white px-3 py-1 rounded">Add</button>
+                        </div>
+                    </div>
+                `;
+                grid.innerHTML += productCard;
+            });
+        }
+
+        // Cart functions
+        function toggleCart() {
+            const sidebar = document.getElementById('cartSidebar');
+            sidebar.classList.toggle('translate-x-full');
+        }
+
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            const existingItem = cart.find(item => item.id === productId);
+            
+            if (existingItem) {
+                existingItem.quantity += 1;
+            } else {
+                cart.push({ ...product, quantity: 1 });
+            }
+            
+            updateCart();
+        }
+
+        function updateCart() {
+            const cartItems = document.getElementById('cartItems');
+            const cartCount = document.getElementById('cartCount');
+            const subtotal = document.getElementById('cartSubtotal');
+            
+            cartCount.textContent = cart.reduce((sum, item) => sum + item.quantity, 0);
+            
+            cartItems.innerHTML = cart.map(item => `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="font-semibold">${item.name}</h4>
+                        <p class="text-sm text-gray-500">₹${item.price} × ${item.quantity}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button onclick="updateQuantity(${item.id}, ${item.quantity - 1})" class="px-2 py-1 border rounded">-</button>
+                        <span>${item.quantity}</span>
+                        <button onclick="updateQuantity(${item.id}, ${item.quantity + 1})" class="px-2 py-1 border rounded">+</button>
+                    </div>
+                </div>
+            `).join('');
+
+            subtotal.textContent = '₹' + cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        }
+
+        function updateQuantity(productId, newQuantity) {
+            if (newQuantity <= 0) {
+                cart = cart.filter(item => item.id !== productId);
+            } else {
+                const item = cart.find(item => item.id === productId);
+                item.quantity = newQuantity;
+            }
+            updateCart();
+        }
+
+        // Login functions
+        function toggleLogin() {
+            const modal = document.getElementById('loginModal');
+            modal.classList.toggle('hidden');
+        }
+
+        function handleLogin(event) {
+            event.preventDefault();
+            const phoneInput = document.getElementById('phoneInput');
+            const otpDiv = document.getElementById('otpDiv');
+            const otpInput = document.getElementById('otpInput');
+            const submitBtn = document.getElementById('loginSubmitBtn');
+
+            if (otpDiv.classList.contains('hidden')) {
+                // Send OTP
+                otpDiv.classList.remove('hidden');
+                submitBtn.textContent = 'Verify OTP';
+            } else {
+                // Verify OTP
+                isLoggedIn = true;
+                document.getElementById('loginBtn').textContent = 'Profile';
+                toggleLogin();
+            }
+        }
+
+        function proceedToCheckout() {
+            if (!isLoggedIn) {
+                toggleLogin();
+                return;
+            }
+            // Implement checkout logic here
+            alert('Proceeding to checkout...');
+        }
+
+        // Initialize the app
+        initProducts();
+    </script>
+<script>document.body.addEventListener('wheel', e => { if (!e.ctrlKey) return; e.preventDefault(); return }, { passive: false })</script>
+	</body>
+</html>
